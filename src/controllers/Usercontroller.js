@@ -3,6 +3,8 @@ import { Usermodle } from "../Models/User.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import sendMail from "../utils/email-send.js";
+import { uploadImageToCloudinary } from "../config/cloudinary.config.js";
+
 
 export const Signup = async (req, res) => {
   try {
@@ -20,6 +22,11 @@ export const Signup = async (req, res) => {
         .json({ message: "Please upload a profile image." });
     }
 
+    const profileImageUrl = await uploadImageToCloudinary(req.file.path);
+    if (!profileImageUrl) {
+      return res.status(500).json({ message: "Image upload failed." });
+    }
+
     const existingUser = await Usermodle.findOne({ email });
     if (existingUser) {
       return res
@@ -28,13 +35,12 @@ export const Signup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const profileImage = req.file.path;
 
     const newUser = await Usermodle.create({
       name,
       email,
       password: hashedPassword,
-      profileImage,
+      profileImage: profileImageUrl,
     });
 
     const payload = { user: { id: newUser._id } };
@@ -85,7 +91,7 @@ export const Login = async (req, res) => {
     const payload = {
       user: {
         id: user._id,
-        role: user.role, 
+        role: user.role,
       },
     };
 
@@ -93,12 +99,10 @@ export const Login = async (req, res) => {
       expiresIn: "1h",
     });
 
-    
-
     res.json({
       message: "Login Successful",
       token,
-      role: user.role, 
+      role: user.role,
     });
   } catch (error) {
     console.log(`Login controller has errors: ${error}`);
@@ -131,12 +135,10 @@ export const forgotPassword = async (req, res) => {
     });
 
     if (!mailResponse) {
-      return res
-        .status(500)
-        .json({
-          message: "Failed to send otp, please try later",
-          status: "failed",
-        });
+      return res.status(500).json({
+        message: "Failed to send otp, please try later",
+        status: "failed",
+      });
     }
 
     user.otp = {
@@ -212,12 +214,10 @@ export const resetPassword = async (req, res) => {
     }
 
     if (!user.otp.verified) {
-      return res
-        .status(400)
-        .json({
-          message: "OTP Authentication failed, you are not verified user",
-          status: "failed",
-        });
+      return res.status(400).json({
+        message: "OTP Authentication failed, you are not verified user",
+        status: "failed",
+      });
     }
 
     const salt = await bcrypt.genSalt(10);
