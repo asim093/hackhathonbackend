@@ -12,7 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 8000
 
 app.use(cors({
-  origin: 'http://localhost:5173' 
+  origin: 'https://frontend-three-delta-38.vercel.app' 
 }));
 
 app.use(express.json());
