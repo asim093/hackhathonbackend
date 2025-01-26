@@ -1,7 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
 import userroutes from "./src/routes/UserRoutes.js";
+import categoryRoutes from './src/routes/CategoryRoutes.js'
 import connectDb from "./src/db/index.js";
+import loanroutes from './src/routes/loan.routes.js'
 import cors from "cors";
 
 dotenv.config();
@@ -16,6 +18,8 @@ app.use(cors({
 app.use(express.json());
 
 app.use("/auth", userroutes);
+app.use('/category' , categoryRoutes )
+app.use('/loan' , loanroutes )
 
 connectDb()
   .then(() => {
