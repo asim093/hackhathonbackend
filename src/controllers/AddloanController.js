@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import { transporter } from "../config/mail-config.js";
 import dotenv from "dotenv";
-import sendMail from "../utils/email-send.js"; // Keep this import
-import { Loan } from "../Models/Loan.model.js";
+import sendMail from "../utils/email-send.js";
+import Loan from "../Models/Loan.model.js";
 
 dotenv.config();
 
@@ -13,14 +13,25 @@ function generatePassword() {
 
 export const createloan = async (req, res) => {
   try {
+    // Log incoming request body for debugging
+    console.log("Request body:", req.body);
+
     const { name, email, cnic, category, depositAmount, loanPeriod } = req.body;
+
+    // Ensure these fields are numbers and not strings
+    const deposit = parseFloat(depositAmount);
+    const period = parseInt(loanPeriod, 10);
+
+    if (isNaN(deposit) || isNaN(period)) {
+      return res.status(400).json({ message: "Invalid deposit amount or loan period" });
+    }
 
     const generatedPassword = generatePassword();
 
     const hashedPassword = await bcrypt.hash(generatedPassword, 10);
 
     const maxLoan = 1000000;
-    const remainingLoan = maxLoan - depositAmount;
+    const remainingLoan = maxLoan - deposit;
     const monthlyInstallment = remainingLoan / (loanPeriod * 12);
 
     const htmlTemplate = `<h1>Loan Account Created</h1>
@@ -32,13 +43,13 @@ export const createloan = async (req, res) => {
                             <li>Password: ${generatedPassword}</li>
                           </ul>
                           <p>Please log in and change your password as soon as possible.</p>`;
+
     await sendMail({
       email: [email],
       subject: "Loan Account Created",
       htmlTemplate,
     });
 
-    // Create the loan document
     const newLoan = new Loan({
       user: {
         name,
@@ -48,10 +59,10 @@ export const createloan = async (req, res) => {
       },
       loanDetails: {
         category,
-        depositAmount,
+        depositAmount: deposit,
         remainingLoan,
         monthlyInstallment,
-        loanPeriod,
+        loanPeriod: period,
       },
     });
 
@@ -62,8 +73,8 @@ export const createloan = async (req, res) => {
       loan: newLoan,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error creating loan", error: error.message });
+    // Log the error for debugging
+    console.error("Error creating loan:", error);
+    res.status(500).json({ message: "Error creating loan", error: error.message });
   }
 };
